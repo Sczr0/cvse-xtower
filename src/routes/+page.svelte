@@ -45,8 +45,8 @@
 </script>
 
 <svelte:head>
-	<title>CVSE xTower — B 站视频分区查询与周刊分数</title>
-	<meta name="description" content="查询 B 站视频的分区信息与周刊分数，由 CVSE 团队制作。" />
+	<title>CVSE — B 站视频分区查询与周刊分数计算（非官方）</title>
+	<meta name="description" content="B 站视频分区查询与周刊分数计算，非官方工具，由 CVSE 团队制作。" />
 </svelte:head>
 
 <div class="min-h-screen bg-[#fafafa] text-[#0a0a0a]">
@@ -60,8 +60,8 @@
 				CV
 			</div>
 			<div>
-				<h1 class="text-sm font-semibold leading-5">CVSE xTower</h1>
-				<p class="text-xs leading-5 text-[#666]">B 站视频分区与周刊分数查询</p>
+				<h1 class="text-sm font-semibold leading-5">CVSE</h1>
+				<p class="text-xs leading-5 text-[#666]">B 站视频分区查询与周刊分数计算（非官方）</p>
 			</div>
 		</header>
 
