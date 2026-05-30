@@ -1,0 +1,14 @@
+[Unit]
+Description=CVSE xTower Go API
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/cvse
+ExecStart=/opt/cvse/cvse-api
+Restart=always
+RestartSec=5
+User=root
+
+[Install]
+WantedBy=multi-user.target
