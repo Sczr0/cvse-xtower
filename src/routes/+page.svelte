@@ -128,6 +128,14 @@
 							<p class="mt-1 text-sm text-[#555]">
 								UP 主：<span class="font-medium text-[#0a0a0a]">{result.owner.name}</span>
 							</p>
+							{#if result.collected}
+								<div class="mt-2 flex flex-wrap items-center gap-2">
+									<span class="rounded-md border border-[#b7ebc6] bg-[#f0fff4] px-2 py-0.5 text-[11px] font-medium text-[#116329]">已收录</span>
+									{#each result.ranks ?? [] as rank}
+										<span class="rounded-md border border-[#d4d4d4] bg-white px-2 py-0.5 text-[11px] font-medium text-[#555]">{rank}</span>
+									{/each}
+								</div>
+							{/if}
 						</div>
 					</div>
 				</section>

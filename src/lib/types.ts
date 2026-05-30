@@ -49,6 +49,8 @@ export interface ResolveData {
 	pubdate: number;
 	ctime: number;
 	score: ScoreInfo | null;
+	collected: boolean;
+	ranks?: string[];
 }
 
 export interface APIResponse {

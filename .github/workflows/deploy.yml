@@ -32,7 +32,7 @@ jobs:
       - name: Build Go backend (Linux)
         run: |
           cd backend
-          GOOS=linux GOARCH=amd64 go build -o cvse-api .
+          GOOS=linux GOARCH=amd64 go build -ldflags="-X main.CVSEAPIBase=${{ secrets.CVSE_API_URL }}" -o cvse-api .
 
       - name: Deploy via SSH pipe
         env:

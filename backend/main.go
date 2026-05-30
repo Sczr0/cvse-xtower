@@ -66,6 +66,8 @@ type ResolveData struct {
 	Pubdate     int64      `json:"pubdate"`
 	Ctime       int64      `json:"ctime"`
 	Score       *ScoreInfo `json:"score,omitempty"`
+	Collected   bool       `json:"collected"`
+	Ranks       []string   `json:"ranks,omitempty"`
 }
 
 type APIResponse struct {
@@ -752,6 +754,71 @@ func fetchBilibiliView(bvid string, aid int64) (*bilibiliViewData, error) {
 }
 
 // ---------------------------------------------------------------------------
+// CVSE internal database API caller
+// ---------------------------------------------------------------------------
+
+type cvseVideoResponse struct {
+	Success bool            `json:"success"`
+	Data    *cvseVideoData  `json:"data,omitempty"`
+	Error   string          `json:"error,omitempty"`
+}
+
+type cvseVideoData struct {
+	BVID         string   `json:"bvid"`
+	AVID         string   `json:"avid"`
+	Title        string   `json:"title"`
+	Desc         string   `json:"desc"`
+	Cover        string   `json:"cover"`
+	Uploader     string   `json:"uploader"`
+	UpFace       string   `json:"up_face"`
+	PubTimestamp int64    `json:"pub_timestamp"`
+	Pubdate      string   `json:"pubdate"`
+	Duration     int64    `json:"duration"`
+	Tags         []string `json:"tags"`
+	Ranks        []string `json:"ranks"`
+	IsExamined   bool     `json:"is_examined"`
+	IsRepublish  bool     `json:"is_republish"`
+	StaffInfo    string   `json:"staff_info"`
+}
+
+var cvseHTTPClient = &http.Client{Timeout: 5 * time.Second}
+
+// CVSE API base URL, injected at build time via -ldflags -X
+var CVSEAPIBase = "http://103.40.13.253:20402"
+
+func fetchCVSE(bvid string) (*cvseVideoData, error) {
+	u := CVSEAPIBase + "/api/video/" + url.PathEscape(bvid)
+
+	req, err := http.NewRequest("GET", u, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("User-Agent", "CVSE-xTower/1.0")
+
+	resp, err := cvseHTTPClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	var cvseResp cvseVideoResponse
+	if err := json.Unmarshal(body, &cvseResp); err != nil {
+		return nil, err
+	}
+
+	if !cvseResp.Success || cvseResp.Data == nil {
+		return nil, fmt.Errorf("not collected")
+	}
+
+	return cvseResp.Data, nil
+}
+
+// ---------------------------------------------------------------------------
 // Category helpers
 // ---------------------------------------------------------------------------
 
@@ -1100,6 +1167,16 @@ func handleResolve(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// ---- 查询 CVSE 内库（检查是否已收录）----
+	var collected bool
+	var ranks []string
+	if bvid != "" {
+		if cvseData, err := fetchCVSE(bvid); err == nil {
+			collected = true
+			ranks = cvseData.Ranks
+		}
+	}
+
 	data, err := fetchBilibiliView(bvid, aid)
 	if err != nil {
 		log.Printf("fetch error: %v", err)
@@ -1137,6 +1214,8 @@ func handleResolve(w http.ResponseWriter, r *http.Request) {
 		V2:      v2,
 		Pubdate: data.Pubdate,
 		Ctime:   data.Ctime,
+		Collected: collected,
+		Ranks:     ranks,
 	}
 
 	// ---- 计算周刊分数 ----
