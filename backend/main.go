@@ -10,6 +10,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -707,12 +708,66 @@ func resolveB23(shortURL string) (string, error) {
 }
 
 // ---------------------------------------------------------------------------
+// Simple in-memory cache with TTL
+// ---------------------------------------------------------------------------
+
+type cacheItem struct {
+	data      interface{}
+	expiresAt time.Time
+}
+
+type cache struct {
+	store map[string]*cacheItem
+	mu    sync.Mutex
+}
+
+func newCache() *cache {
+	return &cache{store: make(map[string]*cacheItem)}
+}
+
+func (c *cache) get(key string) interface{} {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	item, ok := c.store[key]
+	if !ok || time.Now().After(item.expiresAt) {
+		if ok {
+			delete(c.store, key)
+		}
+		return nil
+	}
+	return item.data
+}
+
+func (c *cache) set(key string, data interface{}, ttl time.Duration) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.store[key] = &cacheItem{data: data, expiresAt: time.Now().Add(ttl)}
+}
+
+var (
+	biliCache = newCache() // B 站 API，缓存 5 分钟
+	cvseCache = newCache() // CVSE 内库，缓存 10 分钟
+)
+
+func cacheKey(bvid string, aid int64) string {
+	if bvid != "" {
+		return bvid
+	}
+	return fmt.Sprintf("av%d", aid)
+}
+
+// ---------------------------------------------------------------------------
 // Bilibili API caller
 // ---------------------------------------------------------------------------
 
 var httpClient = &http.Client{Timeout: 10 * time.Second}
 
 func fetchBilibiliView(bvid string, aid int64) (*bilibiliViewData, error) {
+	key := cacheKey(bvid, aid)
+	if cached := biliCache.get(key); cached != nil {
+		return cached.(*bilibiliViewData), nil
+	}
+
 	u := "https://api.bilibili.com/x/web-interface/view?"
 	if bvid != "" {
 		u += "bvid=" + url.QueryEscape(bvid)
@@ -750,6 +805,7 @@ func fetchBilibiliView(bvid string, aid int64) (*bilibiliViewData, error) {
 		return nil, fmt.Errorf("Bilibili API returned empty data")
 	}
 
+	biliCache.set(key, bResp.Data, 5*time.Minute)
 	return bResp.Data, nil
 }
 
@@ -787,6 +843,11 @@ var cvseHTTPClient = &http.Client{Timeout: 5 * time.Second}
 var CVSEAPIBase = "http://103.40.13.253:20402"
 
 func fetchCVSE(bvid string) (*cvseVideoData, error) {
+	key := cacheKey(bvid, 0)
+	if cached := cvseCache.get(key); cached != nil {
+		return cached.(*cvseVideoData), nil
+	}
+
 	u := CVSEAPIBase + "/api/video/" + url.PathEscape(bvid)
 
 	req, err := http.NewRequest("GET", u, nil)
@@ -815,6 +876,7 @@ func fetchCVSE(bvid string) (*cvseVideoData, error) {
 		return nil, fmt.Errorf("not collected")
 	}
 
+	cvseCache.set(key, cvseResp.Data, 10*time.Minute)
 	return cvseResp.Data, nil
 }
 
