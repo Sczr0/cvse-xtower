@@ -1,10 +1,18 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import './layout.css';
 	import favicon from '$lib/assets/favicon.svg';
-	import { resolveVideo, fmtNum, fmtTime } from '$lib/api';
+	import { resolveVideo, fmtNum, fmtTime, initCaptcha } from '$lib/api';
 	import type { ResolveData } from '$lib/types';
 
 	let { children } = $props();
+
+	// ESA 验证码场景 ID
+	const CAPTCHA_SCENE_ID = 'w36a49os';
+
+	onMount(() => {
+		initCaptcha(CAPTCHA_SCENE_ID);
+	});
 
 	let videoInput = $state('');
 	let loading = $state(false);
