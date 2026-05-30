@@ -32,6 +32,7 @@
 			const data = await resolveVideo(input);
 			result = data;
 		} catch (e) {
+			if (e instanceof Error && e.message === '验证已取消') return;
 			errorMsg = e instanceof Error ? e.message : '请求失败，请检查输入后重试';
 		} finally {
 			loading = false;
@@ -281,11 +282,17 @@
 {#if showDisclaimer}
 	<div
 		class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
+		role="dialog"
+		tabindex="-1"
 		onclick={() => showDisclaimer = false}
+		onkeydown={(e) => { if (e.key === 'Escape') showDisclaimer = false }}
 	>
+		<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 		<div
 			class="max-w-lg rounded-xl border border-[#e5e5e5] bg-white px-6 py-5 shadow-lg sm:px-8 sm:py-6"
+			role="document"
 			onclick={(e) => e.stopPropagation()}
+			onkeydown={(e) => e.stopPropagation()}
 		>
 			<h3 class="text-sm font-semibold">免责声明</h3>
 			<div class="mt-3 space-y-3 text-xs leading-6 text-[#555]">

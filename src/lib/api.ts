@@ -19,6 +19,7 @@ declare global {
 			success: (captchaVerifyParam: string) => void;
 			fail: (result: any) => void;
 			getInstance?: (instance: { show: () => void; refresh: () => void }) => void;
+			onClose?: () => void;
 			server?: string[];
 			slideStyle?: { width: number; height: number };
 		}) => void;
@@ -53,6 +54,10 @@ export function initCaptcha(sceneId: string) {
 			},
 			fail: () => {
 				pendingReject?.(new Error('验证未通过'));
+				pendingReject = null;
+			},
+			onClose: () => {
+				pendingReject?.(new Error('验证已取消'));
 				pendingReject = null;
 			}
 		});
